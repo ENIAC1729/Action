@@ -1,0 +1,60 @@
+# 自动定时执行Python脚本的GitHub Actions配置
+name: Auto Run Python Script
+
+# 触发条件配置
+on:
+  # 定时触发器模块
+  schedule:
+    # 每天UTC时间00:00运行（相当于北京时间08:00）
+    - cron: '0 0 * * *'
+  # 手动触发模块
+  workflow_dispatch:
+    inputs:
+      script_name:
+        description: 'Script to execute'
+        required: false
+        default: 'demo.py'
+
+# 环境变量配置模块
+env:
+  PYTHON_VERSION: '3.10'
+  DEFAULT_SCRIPT: 'demo.py'
+
+# 任务定义模块
+jobs:
+  execute_script:
+    name: Execute Python Script
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Shanghai
+    steps:
+      # 代码检出模块
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      # Python环境配置模块
+      - name: Setup Python environment
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      # 依赖管理模块
+      - name: Install dependencies
+        run: |
+          # 更新包管理工具
+          python -m pip install --upgrade pip
+          
+          # 安装项目依赖
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+      
+      # 脚本执行模块
+      - name: Run Python script
+        run: |
+          # 确定要执行的脚本
+          SCRIPT_TO_RUN="${{ github.event.inputs.script_name || env.DEFAULT_SCRIPT }}"
+          
+          # 执行目标脚本
+          python ${SCRIPT_TO_RUN}
