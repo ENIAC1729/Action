@@ -1,0 +1,39 @@
+# 工作流名称：创建发布
+name: Create Release
+
+# 触发条件：当推送含 v 开头的标签时执行（例如 v1.0.0）
+on:
+  push:
+    tags: 
+      - 'v*'
+
+# 权限设置：允许工作流写入仓库内容（必需用于创建发布）
+permissions:
+  contents: write
+
+# 工作流任务
+jobs:
+  # 构建任务
+  build: 
+    # 在最新的 Windows 环境上运行
+    runs-on: windows-latest
+    
+    # 任务步骤
+    steps:
+      # 步骤1：使用 PyInstaller 创建可执行文件
+      - name: Create Executable
+        id: create_executable  # 步骤ID，可以被后续步骤引用
+        uses: sayyid5416/pyinstaller@v1  # 使用第三方 action 构建 Python 程序
+        with:
+          python_ver: '3.9'  # 指定 Python 版本
+          spec: 'demo.py'  # 要打包的 Python 文件
+          upload_exe_with_name: 'run'  # 输出的可执行文件名称
+          options: --onefile  # PyInstaller 选项，创建单一可执行文件
+
+      # 步骤2：创建 GitHub Release 并上传构建的文件
+      - name: Release
+        uses: softprops/action-gh-release@v2  # 使用第三方 action 创建发布
+        # 仅在推送标签时执行此步骤
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ./dist/**  # 上传 dist 目录下的所有文件到 release
