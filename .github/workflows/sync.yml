@@ -1,0 +1,41 @@
+name: Upstream Sync  # Workflow 的名称
+
+permissions:
+  contents: write  # 授予 workflow 写入仓库内容的权限
+
+on:
+  schedule:
+    - cron: "0 0 * * *"  # 定义定时触发器，每天 UTC 时间 00:00 触发
+  workflow_dispatch:  # 允许手动触发 workflow
+
+env:
+  UPSTREAM_REPO: ChatGPTNextWeb/ChatGPT-Next-Web 
+  
+jobs:
+  sync_latest_from_upstream:  # 定义一个名为 sync_latest_from_upstream 的 job
+    name: Sync latest commits from upstream repo  # Job 的名称
+    runs-on: ubuntu-latest  # 指定 job 运行在 Ubuntu 最新版本上
+    if: ${{ github.event.repository.fork }}  # 仅在当前仓库是 fork 仓库时运行
+
+    steps:
+      # Step 1: run a standard checkout action
+      - name: Checkout target repo  # 步骤的名称
+        uses: actions/checkout@v3  # 使用 actions/checkout@v3 action 检出当前仓库的代码
+
+      # Step 2: run the sync action
+      - name: Sync upstream changes  # 步骤的名称
+        id: sync  # 为该步骤设置 ID，方便后续引用
+        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4  # 使用 aormsby/Fork-Sync-With-Upstream-action@v3.4 action 同步上游仓库
+        with:
+          upstream_sync_repo: ${{ env.UPSTREAM_REPO }}  # 上游仓库的名称
+          upstream_sync_branch: main  # 上游仓库的分支
+          target_sync_branch: main  # 目标仓库的分支
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }}  # 用于访问目标仓库的 token，GitHub 自动生成
+          test_mode: false  # 设置为 false，执行真正的同步操作
+
+      - name: Sync check  # 步骤的名称
+        if: failure()  # 如果之前的步骤失败，则执行此步骤
+        run: |
+          echo "[Error] 由于上游仓库的 workflow 文件变更，导致 GitHub 自动暂停了本次自动更新，你需要手动 Sync Fork 一次，详细教程请查看：https://github.com/Yidadaa/ChatGPT-Next-Web/blob/main/README_CN.md#%E6%89%93%E5%BC%80%E8%87%AA%E5%8A%A8%E6%9B%B4%E6%96%B0"  # 输出错误信息
+          echo "[Error] Due to a change in the workflow file of the upstream repository, GitHub has automatically suspended the scheduled automatic update. You need to manually sync your fork. Please refer to the detailed tutorial for instructions: https://github.com/Yidadaa/ChatGPT-Next-Web#enable-automatic-updates"  # 输出错误信息
+          exit 1  # 以错误码 1 退出，表示 workflow 失败
